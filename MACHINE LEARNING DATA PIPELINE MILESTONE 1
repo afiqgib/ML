@@ -14,7 +14,7 @@ from sklearn.model_selection import train_test_split
 # -------------------------------
 # 2. LOAD DATASET
 # -------------------------------
-file_path = r"C:\Users\thesv\Downloads\student+performance+on+an+entrance+examination\CEE_DATA.arff"
+file_path = r"data/CEE_DATA.arff"
 
 data, meta = arff.loadarff(file_path)
 df = pd.DataFrame(data)
