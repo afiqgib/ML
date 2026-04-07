@@ -1,0 +1,88 @@
+# ============================================================
+# MACHINE LEARNING DATA PIPELINE (MILESTONE 1)
+# Student Performance Dataset (ARFF)
+# ============================================================
+
+# -------------------------------
+# 1. IMPORT LIBRARIES
+# -------------------------------
+import pandas as pd
+from scipy.io import arff
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+
+# -------------------------------
+# 2. LOAD DATASET
+# -------------------------------
+file_path = r"C:\Users\thesv\Downloads\student+performance+on+an+entrance+examination\CEE_DATA.arff"
+
+data, meta = arff.loadarff(file_path)
+df = pd.DataFrame(data)
+
+print("Dataset successfully loaded!\n")
+
+# -------------------------------
+# 3. DATA CLEANING
+# -------------------------------
+
+
+for col in df.columns:
+    if df[col].dtype == object:
+        df[col] = df[col].apply(lambda x: x.decode('utf-8'))
+
+# Check missing values
+print("Missing Values:\n", df.isnull().sum(), "\n")
+
+# Remove duplicate rows
+before_rows = df.shape[0]
+df = df.drop_duplicates()
+after_rows = df.shape[0]
+
+print(f"Duplicates removed: {before_rows - after_rows}\n")
+
+# -------------------------------
+# 4. DATA EXPLORATION
+# -------------------------------
+print("First 5 Rows:\n", df.head(), "\n")
+
+print("Dataset Info:\n")
+df.info()
+
+print("\nStatistical Summary:\n", df.describe(include='all'), "\n")
+
+# -------------------------------
+# 5. DATA PREPROCESSING
+# -------------------------------
+
+# Encode categorical features
+label_encoders = {}
+
+for col in df.columns:
+    le = LabelEncoder()
+    df[col] = le.fit_transform(df[col].astype(str))
+    label_encoders[col] = le
+
+print("\nData after Encoding:\n", df.head(), "\n")
+
+# -------------------------------
+# 6. FEATURE & TARGET SPLIT
+# -------------------------------
+X = df.drop('Performance', axis=1)
+y = df['Performance']
+
+# -------------------------------
+# 7. TRAIN-TEST SPLIT
+# -------------------------------
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y   # keeps class distribution balanced
+)
+
+print("Train-Test Split Completed!")
+print("Training set shape:", X_train.shape)
+print("Testing set shape:", X_test.shape)
+
+
+print("\n   Data is ready for ML model.")
