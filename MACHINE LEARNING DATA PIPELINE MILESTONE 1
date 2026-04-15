@@ -84,5 +84,20 @@ print("Train-Test Split Completed!")
 print("Training set shape:", X_train.shape)
 print("Testing set shape:", X_test.shape)
 
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, accuracy_score
+
+# Initialize the model
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+
+# Train the model
+model.fit(X_train, y_train)
+
+# Make predictions
+y_pred = model.fit_predict(X_test)
+
+# Evaluate
+print(f"Accuracy: {accuracy_score(y_test, y_pred):.2f}")
+print(classification_report(y_test, y_pred))
 
 print("\n   Data is ready for ML model.")
