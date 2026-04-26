@@ -19,7 +19,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 # -------------------------------
 # 2. LOAD DATASET
 # -------------------------------
-file_path = r"C:\Users\User\Downloads\DVtuto\CEE_DATA.arff" # Update this path to your actual file location
+file_path = r"data/CEE_DATA.arff" # Update this path to your actual file location
 
 try:
     data, meta = arff.loadarff(file_path)
