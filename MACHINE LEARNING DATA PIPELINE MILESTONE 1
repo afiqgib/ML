@@ -19,7 +19,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 # -------------------------------
 # 2. LOAD DATASET
 # -------------------------------
-file_path = r"data/CEE_DATA.arff" # Update this path to your actual file location
+file_path = r"data/CEE_DATA.arff"
 
 try:
     data, meta = arff.loadarff(file_path)
@@ -104,10 +104,67 @@ feature_importance_df['AbsImportance'] = feature_importance_df['Importance'].abs
 feature_importance_df = feature_importance_df.sort_values(by='AbsImportance', ascending=False)
 
 plt.subplot(1, 2, 2)
-sns.barplot(x='Importance', y='Feature', data=feature_importance_df, palette='viridis')
+sns.barplot(x='Importance', y='Feature', data=feature_importance_df, hue='Feature', palette='viridis', legend=False)
 plt.title('Feature Importance (Coefficients)')
 plt.xlabel('Coefficient Value')
 plt.ylabel('Features')
+
+plt.tight_layout()
+plt.show()
+
+
+# ============================================================
+# MILESTONE 3: THE TRAINING LOOP & METRICS
+# Demonstrating iterative training progress and model performance.
+# ============================================================
+
+from sklearn.model_selection import cross_val_score
+from sklearn.metrics import mean_squared_error, r2_score
+
+# 1. Initialize the Model
+# We use Linear Regression as per the Milestone 2 Architecture.
+model = LinearRegression()
+
+# 2. The Iterative Training Loop (5-Fold Cross-Validation)
+# This demonstrates "progress" by testing the model across 5 different subsets of data.
+print("Starting Iterative Training Loop (5-Folds)...")
+cv_scores = cross_val_score(model, X, y, cv=5, scoring='r2')
+
+for i, score in enumerate(cv_scores):
+    print(f"Iteration {i+1} Progress: R-squared = {score:.4f}")
+
+# 3. Final Model Fitting
+# Training the model on the full training set (from Milestone 1 split)
+model.fit(X_train, y_train)
+print("\nFinal Training Phase Completed.")
+
+# 4. Generate Predictions & Calculate Metrics
+y_pred = model.predict(X_test)
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print(f"\n--- Milestone 3 Results ---")
+print(f"Mean Squared Error (MSE): {mse:.4f}")
+print(f"Final R-squared Score: {r2:.4f}")
+
+# 5. Visualizing Training Progress and Results
+plt.figure(figsize=(12, 5))
+
+# Subplot 1: Progress across iterations
+plt.subplot(1, 2, 1)
+plt.plot(range(1, 6), cv_scores, marker='o', linestyle='--', color='purple')
+plt.title('Training Progress (R-squared per Fold)')
+plt.xlabel('Iteration')
+plt.ylabel('R-squared Score')
+plt.grid(True)
+
+# Subplot 2: Prediction Accuracy
+plt.subplot(1, 2, 2)
+sns.scatterplot(x=y_test, y=y_pred, alpha=0.6)
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], color='red', lw=2)
+plt.title('Actual vs Predicted Performance')
+plt.xlabel('Actual (Encoded Categories)')
+plt.ylabel('Predicted Value')
 
 plt.tight_layout()
 plt.show()
