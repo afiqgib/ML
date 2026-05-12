@@ -684,7 +684,7 @@ plt.savefig(
 plt.close()
 
 # ------------------------------------
-# RESULT COMPARISON 
+# ACTUAL VS PREDICTED COMPARISON 
 # ------------------------------------
 result_comparison_df = pd.DataFrame({
     "Actual Result": y_test.values,
@@ -726,11 +726,22 @@ plt.savefig(
 plt.close()
 
 # -------------------------
-#  METRICS SUMMARY
+#  FINAL METRICS SUMMARY
 # -------------------------
 final_summary_df = pd.DataFrame({
-    "Metric" : ["Final Testing Accuracy"],
-    "Value": [final_test_accuracy]
+    "Metric": [
+        "Accuracy",
+        "Precision",
+        "Recall",
+        "F1-Score"
+    ],
+
+    "Value": [
+        final_report["accuracy"],
+        final_report["weighted avg"]["precision"],
+        final_report["weighted avg"]["recall"],
+        final_report["weighted avg"]["f1-score"]
+    ]
 })
  
 final_summary_df.to_csv(
@@ -761,7 +772,7 @@ plt.savefig(
 plt.close()
 
 # -------------------------
-# CONFUSION METRICS
+# FINAL CONFUSION METRICS
 # -------------------------
 fig, ax = plt.subplots(figsize=(7, 5))
 
