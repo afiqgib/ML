@@ -1,0 +1,785 @@
+# ============================================================
+# MACHINE LEARNING DATA PIPELINE (INTEGRATED)
+# Student Performance Dataset (ARFF) - Milestone 1 & 2
+# ============================================================
+
+# -------------------------------
+# 1. IMPORT LIBRARIES
+# -------------------------------
+import os
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from scipy.io import arff
+
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from sklearn.model_selection import (
+    train_test_split,
+    cross_val_score,
+    GridSearchCV
+)
+
+from sklearn.linear_model import LinearRegression
+from sklearn.tree import DecisionTreeClassifier
+
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+
+from sklearn.metrics import (
+    mean_squared_error,
+    r2_score,
+    accuracy_score,
+    classification_report,
+    ConfusionMatrixDisplay
+)
+
+# ============================================================
+# OUTPUT DIRECTORY
+# ============================================================
+
+output_dir = r"C:\Users\AMD\OneDrive\Desktop\PROJECT ML\results"
+os.makedirs(output_dir, exist_ok=True)
+
+# ============================================================
+# MILESTONE 1 & 2
+# ============================================================
+
+# -------------------------------
+# 2. LOAD DATASET
+# -------------------------------
+file_path = r"C:\Users\AMD\OneDrive\Desktop\PROJECT ML\CEE_DATA.arff"
+
+try:
+    data, meta = arff.loadarff(file_path)
+    df = pd.DataFrame(data)
+    print("Dataset successfully loaded!\n")
+
+except FileNotFoundError:
+    print(f"Error: The file at {file_path} was not found.")
+    exit()
+
+# -------------------------------
+# 3. DATA CLEANING
+# -------------------------------
+for col in df.columns:
+
+    if df[col].dtype == object:
+
+        df[col] = df[col].apply(
+            lambda x: x.decode("utf-8")
+            if isinstance(x, bytes)
+            else x
+        )
+
+df = df.drop_duplicates()
+
+print("Dataset shape after removing duplicates:", df.shape)
+
+# -------------------------------
+# 4. DATA PREPROCESSING
+# -------------------------------
+label_encoders = {}
+
+for col in df.columns:
+
+    le = LabelEncoder()
+
+    df[col] = le.fit_transform(df[col].astype(str))
+
+    label_encoders[col] = le
+
+# -------------------------------
+# 5. FEATURE & TARGET SPLIT
+# -------------------------------
+X = df.drop("Performance", axis=1)
+y = df["Performance"]
+
+# -------------------------------
+# 6. TRAIN-TEST SPLIT
+# -------------------------------
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y
+)
+
+# -------------------------------
+# 7. INITIALIZE AND TRAIN MODEL
+# -------------------------------
+lr_model = LinearRegression()
+
+lr_model.fit(X_train, y_train)
+
+# -------------------------------
+# 8. MAKE PREDICTIONS & EVALUATE
+# -------------------------------
+y_pred = lr_model.predict(X_test)
+
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print(f"Mean Squared Error: {mse:.4f}")
+print(f"R-squared Score: {r2:.4f}")
+
+# -------------------------------
+# 9. VISUALIZATION 1
+# ACTUAL VS PREDICTED
+# -------------------------------
+plt.figure(figsize=(10, 5))
+
+plt.subplot(1, 2, 1)
+
+sns.regplot(
+    x=y_test,
+    y=y_pred,
+    scatter_kws={"alpha": 0.5},
+    line_kws={"color": "red"}
+)
+
+plt.title("Actual vs Predicted")
+plt.xlabel("Actual (Encoded)")
+plt.ylabel("Predicted")
+
+# -------------------------------
+# 10. VISUALIZATION 2
+# FEATURE IMPORTANCE
+# -------------------------------
+importance = lr_model.coef_
+
+feature_names = X.columns
+
+feature_importance_df = pd.DataFrame({
+    "Feature": feature_names,
+    "Importance": importance
+})
+
+feature_importance_df["AbsImportance"] = (
+    feature_importance_df["Importance"].abs()
+)
+
+feature_importance_df = feature_importance_df.sort_values(
+    by="AbsImportance",
+    ascending=False
+)
+
+plt.subplot(1, 2, 2)
+
+sns.barplot(
+    x="Importance",
+    y="Feature",
+    data=feature_importance_df,
+    hue="Feature",
+    palette="viridis",
+    legend=False
+)
+
+plt.title("Feature Importance (Coefficients)")
+plt.xlabel("Coefficient Value")
+plt.ylabel("Features")
+
+plt.tight_layout()
+
+plt.savefig(
+    os.path.join(
+        output_dir,
+        "milestone1_feature_importance.png"
+    )
+)
+
+plt.close()
+
+# ============================================================
+# MILESTONE 3
+# TRAINING LOOP & METRICS
+# ============================================================
+
+# -------------------------------
+# 1. INITIALIZE MODEL
+# -------------------------------
+model = LinearRegression()
+
+# -------------------------------
+# 2. ITERATIVE TRAINING LOOP
+# -------------------------------
+print("\nStarting Iterative Training Loop (5-Folds)...")
+
+cv_scores = cross_val_score(
+    model,
+    X,
+    y,
+    cv=5,
+    scoring="r2"
+)
+
+for i, score in enumerate(cv_scores):
+
+    print(f"Iteration {i + 1} Progress: R-squared = {score:.4f}")
+
+# -------------------------------
+# 3. FINAL MODEL FITTING
+# -------------------------------
+model.fit(X_train, y_train)
+
+print("\nFinal Training Phase Completed.")
+
+# -------------------------------
+# 4. GENERATE PREDICTIONS
+# -------------------------------
+y_pred = model.predict(X_test)
+
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print("\n--- Milestone 3 Results ---")
+print(f"Mean Squared Error (MSE): {mse:.4f}")
+print(f"Final R-squared Score: {r2:.4f}")
+
+# -------------------------------
+# 5. VISUALIZING RESULTS
+# -------------------------------
+plt.figure(figsize=(12, 5))
+
+# -------------------------------
+# SUBPLOT 1
+# -------------------------------
+plt.subplot(1, 2, 1)
+
+plt.plot(
+    range(1, 6),
+    cv_scores,
+    marker="o",
+    linestyle="--",
+    color="purple"
+)
+
+plt.title("Training Progress (R-squared per Fold)")
+plt.xlabel("Iteration")
+plt.ylabel("R-squared Score")
+
+plt.grid(True)
+
+# -------------------------------
+# SUBPLOT 2
+# -------------------------------
+plt.subplot(1, 2, 2)
+
+sns.scatterplot(
+    x=y_test,
+    y=y_pred,
+    alpha=0.6
+)
+
+plt.plot(
+    [y_test.min(), y_test.max()],
+    [y_test.min(), y_test.max()],
+    color="red",
+    lw=2
+)
+
+plt.title("Actual vs Predicted Performance")
+plt.xlabel("Actual (Encoded Categories)")
+plt.ylabel("Predicted Value")
+
+plt.tight_layout()
+
+plt.savefig(
+    os.path.join(
+        output_dir,
+        "milestone3_training_progress.png"
+    )
+)
+
+plt.close()
+
+# ============================================================
+# MILESTONE 4
+# MODEL OPTIMIZATION
+# ============================================================
+
+# -------------------------------
+# RELOAD DATASET
+# -------------------------------
+data, meta = arff.loadarff(file_path)
+
+df = pd.DataFrame(data)
+
+print("\nDataset successfully loaded for Milestone 4!")
+
+# -------------------------------
+# DATA CLEANING
+# -------------------------------
+for col in df.columns:
+
+    if df[col].dtype == object:
+
+        df[col] = df[col].apply(
+            lambda x: x.decode("utf-8")
+            if isinstance(x, bytes)
+            else x
+        )
+
+df = df.drop_duplicates()
+
+print("Dataset shape after removing duplicates:", df.shape)
+
+# -------------------------------
+# FEATURE AND TARGET SPLIT
+# -------------------------------
+X = df.drop("Performance", axis=1)
+y = df["Performance"]
+
+print("\nTarget class distribution:")
+print(y.value_counts())
+
+# -------------------------------
+# TRAIN TEST SPLIT
+# -------------------------------
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y
+)
+
+# -------------------------------
+# PREPROCESSING
+# -------------------------------
+categorical_features = X.columns.tolist()
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        (
+            "cat",
+            OneHotEncoder(handle_unknown="ignore"),
+            categorical_features
+        )
+    ]
+)
+
+# ============================================================
+# PART A
+# BEFORE OPTIMIZATION
+# Baseline Decision Tree Model
+# ============================================================
+
+baseline_model = Pipeline(
+    steps=[
+        ("preprocessor", preprocessor),
+        ("classifier", DecisionTreeClassifier(random_state=42))
+    ]
+)
+
+baseline_model.fit(X_train, y_train)
+
+baseline_train_pred = baseline_model.predict(X_train)
+baseline_test_pred = baseline_model.predict(X_test)
+
+baseline_train_acc = accuracy_score(
+    y_train,
+    baseline_train_pred
+)
+
+baseline_test_acc = accuracy_score(
+    y_test,
+    baseline_test_pred
+)
+
+print("\n============================================================")
+print("BEFORE OPTIMIZATION: BASELINE DECISION TREE")
+print("============================================================")
+
+print(f"Training Accuracy: {baseline_train_acc:.4f}")
+print(f"Testing Accuracy: {baseline_test_acc:.4f}")
+
+print(
+    f"Overfitting Gap: "
+    f"{baseline_train_acc - baseline_test_acc:.4f}"
+)
+
+print("\nClassification Report Before Optimization:")
+
+print(
+    classification_report(
+        y_test,
+        baseline_test_pred
+    )
+)
+
+# ============================================================
+# PART B
+# AFTER OPTIMIZATION
+# Tuned Decision Tree using GridSearchCV
+# ============================================================
+
+optimized_pipeline = Pipeline(
+    steps=[
+        ("preprocessor", preprocessor),
+        ("classifier", DecisionTreeClassifier(random_state=42))
+    ]
+)
+
+param_grid = {
+    "classifier__max_depth": [2, 3, 4, 5, 6, 8],
+    "classifier__min_samples_split": [2, 5, 10, 20],
+    "classifier__min_samples_leaf": [1, 2, 4, 6, 8],
+    "classifier__criterion": ["gini", "entropy"]
+}
+
+grid_search = GridSearchCV(
+    optimized_pipeline,
+    param_grid,
+    cv=5,
+    scoring="accuracy",
+    n_jobs=-1
+)
+
+grid_search.fit(X_train, y_train)
+
+best_model = grid_search.best_estimator_
+
+optimized_train_pred = best_model.predict(X_train)
+optimized_test_pred = best_model.predict(X_test)
+
+optimized_train_acc = accuracy_score(
+    y_train,
+    optimized_train_pred
+)
+
+optimized_test_acc = accuracy_score(
+    y_test,
+    optimized_test_pred
+)
+
+print("\n============================================================")
+print("AFTER OPTIMIZATION: TUNED DECISION TREE")
+print("============================================================")
+
+print("Best Parameters:", grid_search.best_params_)
+
+print(f"Training Accuracy: {optimized_train_acc:.4f}")
+print(f"Testing Accuracy: {optimized_test_acc:.4f}")
+
+print(
+    f"Overfitting Gap: "
+    f"{optimized_train_acc - optimized_test_acc:.4f}"
+)
+
+print("\nClassification Report After Optimization:")
+
+print(
+    classification_report(
+        y_test,
+        optimized_test_pred
+    )
+)
+
+# ============================================================
+# PART C : COMPARE BEFORE AND AFTER OPTIMIZATION 
+# ============================================================
+
+results = pd.DataFrame({
+    "Model": [
+        "Before Optimization",
+        "After Optimization"
+    ],
+
+    "Training Accuracy": [
+        baseline_train_acc,
+        optimized_train_acc
+    ],
+
+    "Testing Accuracy": [
+        baseline_test_acc,
+        optimized_test_acc
+    ],
+
+    "Overfitting Gap": [
+        baseline_train_acc - baseline_test_acc,
+        optimized_train_acc - optimized_test_acc
+    ]
+})
+
+print("\n============================================================")
+print("MODEL COMPARISON")
+print("============================================================")
+
+print(results)
+
+# -------------------------------
+# SAVE RESULTS
+# -------------------------------
+results.to_csv(
+    os.path.join(
+        output_dir,
+        "milestone4_model_comparison.csv"
+    ),
+    index=False
+)
+
+# -------------------------------
+# VISUALIZATION 1
+# ACCURACY COMPARISON
+# -------------------------------
+plt.figure(figsize=(8, 5))
+
+x = range(len(results["Model"]))
+
+plt.bar(
+    x,
+    results["Training Accuracy"],
+    width=0.4,
+    label="Training Accuracy"
+)
+
+plt.bar(
+    [i + 0.4 for i in x],
+    results["Testing Accuracy"],
+    width=0.4,
+    label="Testing Accuracy"
+)
+
+plt.xticks(
+    [i + 0.2 for i in x],
+    results["Model"]
+)
+
+plt.ylabel("Accuracy")
+
+plt.title(
+    "Training vs Testing Accuracy "
+    "Before and After Optimization"
+)
+
+plt.legend()
+
+plt.tight_layout()
+
+plt.savefig(
+    os.path.join(
+        output_dir,
+        "milestone4_accuracy_comparison.png"
+    )
+)
+
+plt.close()
+
+# -------------------------------
+# VISUALIZATION 2 : OVERFITTING GAP
+# -------------------------------
+plt.figure(figsize=(7, 5))
+
+plt.bar(
+    results["Model"],
+    results["Overfitting Gap"]
+)
+
+plt.ylabel("Training Accuracy - Testing Accuracy")
+
+plt.title(
+    "Overfitting Gap Before and After Optimization"
+)
+
+plt.tight_layout()
+
+plt.savefig(
+    os.path.join(
+        output_dir,
+        "milestone4_overfitting_gap.png"
+    )
+)
+
+plt.close()
+
+# -------------------------------
+# VISUALIZATION 3 : CONFUSION MATRIX
+# -------------------------------
+fig, ax = plt.subplots(figsize=(7, 5))
+
+ConfusionMatrixDisplay.from_estimator(
+    best_model,
+    X_test,
+    y_test,
+    ax=ax
+)
+
+plt.title("Confusion Matrix After Optimization")
+
+plt.tight_layout()
+
+plt.savefig(
+    os.path.join(
+        output_dir,
+        "milestone4_confusion_matrix.png"
+    )
+)
+
+plt.close()
+
+# ============================================================
+# DOWNLOAD RESULTS
+# ============================================================
+
+print("\nMilestone 4 completed successfully.")
+
+print(
+    f"All result files are saved in:\n{output_dir}"
+)
+
+# =============================================================
+# Milestone 5 : FINAL EVALUATION 
+# ==============================================================
+
+print("\n======================================================")
+print("MILESTONE 5 : FINAL MODEL EVALUATION")
+print("========================================================")
+
+# -------------------------
+# TEST METRICS
+# -------------------------
+final_test_accuracy = accuracy_score(y_test, optimized_test_pred)
+print(f"Final Testing Accuracy : {final_test_accuracy:.4f}")
+
+print("\nClassification Report:")
+final_report = classification_report (
+    y_test, optimized_test_pred, output_dict=True
+)
+
+final_report_df = pd.DataFrame(final_report). transpose()
+print(final_report_df)
+
+final_report_df.to_csv(
+    os.path.join(output_dir,"milestone5_classification_report.csv")
+)
+fig, ax = plt.subplots(figsize=(10, 4))
+
+ax.axis('tight')
+ax.axis('off')
+
+table = ax.table(
+    cellText=final_report_df.round(3).values,
+    colLabels=final_report_df.columns,
+    rowLabels=final_report_df.index,
+    loc='center'
+)
+
+table.auto_set_font_size(False)
+table.set_fontsize(8)
+table.scale(1.2, 1.2)
+
+plt.title("Milestone 5 Classification Report")
+
+plt.savefig(
+    os.path.join(
+        output_dir,
+        "Milestone_5_Classification_Report.png"
+    ),
+    bbox_inches='tight'
+)
+
+plt.close()
+
+# ------------------------------------
+# RESULT COMPARISON 
+# ------------------------------------
+result_comparison_df = pd.DataFrame({
+    "Actual Result": y_test.values,
+    "Predicted Result": optimized_test_pred
+})
+
+print("\nActual vs Predicted Result:")
+print(result_comparison_df.head(20))
+
+result_comparison_df.to_csv(
+    os.path.join(output_dir,"Milestone_5_Result_Comparison.csv"), 
+    index = False
+)
+fig, ax = plt.subplots(figsize=(8, 6))
+
+ax.axis('tight')
+ax.axis('off')
+
+table = ax.table(
+    cellText=result_comparison_df.head(20).values,
+    colLabels=result_comparison_df.columns,
+    loc='center'
+)
+
+table.auto_set_font_size(False)
+table.set_fontsize(8)
+table.scale(1.2, 1.2)
+
+plt.title("Actual vs Predicted Results")
+
+plt.savefig(
+    os.path.join(
+        output_dir,
+        "Milestone_5_Actual_vs_Predicted.png"
+    ),
+    bbox_inches='tight'
+)
+
+plt.close()
+
+# -------------------------
+#  METRICS SUMMARY
+# -------------------------
+final_summary_df = pd.DataFrame({
+    "Metric" : ["Final Testing Accuracy"],
+    "Value": [final_test_accuracy]
+})
+ 
+final_summary_df.to_csv(
+    os.path.join(output_dir,"Milestone_5_Metrics_Summary.csv")
+)
+
+plt.figure(figsize=(6, 5))
+
+plt.bar(
+    final_summary_df["Metric"],
+    final_summary_df["Value"]
+)
+
+plt.ylabel("Score")
+plt.title("Milestone 5 Final Evaluation Metric")
+
+plt.ylim(0, 1)
+
+plt.tight_layout()
+
+plt.savefig(
+    os.path.join(
+        output_dir,
+        "Milestone_5_Final_Metrics_Graph.png"
+    )
+)
+
+plt.close()
+
+# -------------------------
+# CONFUSION METRICS
+# -------------------------
+fig, ax = plt.subplots(figsize=(7, 5))
+
+ConfusionMatrixDisplay.from_estimator(
+    best_model,
+    X_test,
+    y_test,
+    ax = ax
+)
+
+plt.title("Milestone 5 Final Confusion Matrix")
+plt.tight_layout()
+
+plt.savefig(
+    os.path.join(output_dir, "Milestone_5_Final_Confusion_matrix.png")
+)
+plt.close()
+
+
+print("\nMilestone 5 completed successfully.")
+print(f"Final evaluation files saved : \n{output_dir}")
