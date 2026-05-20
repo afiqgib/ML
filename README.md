@@ -5,6 +5,11 @@
 - VINOTHINI A/P CHANDRA MOHAN  [BI23110287]
 - THESVEND A/L RAMESH  [BI23160441]  
 
+## How to run
+1. Open the link https://colab.research.google.com/drive/12Sr78ZIf0UvpMfet18wjXEON9xvWCdss?usp=sharing
+2. Wait for a few seconds for it to load
+3. Scroll down to see the Graphs and Output
+4. Data used can be found at data/CEE_DATA.arff on github
 
 ## Milestone 4: Model Optimization
 
